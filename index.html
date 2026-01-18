@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оценка числа π методом Монте-Карло</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            opacity: 0.9;
+        }
+        
+        .control-panel {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .results-panel {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        h2 {
+            color: #4b6cb7;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="number"]:focus {
+            border-color: #4b6cb7;
+            outline: none;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #calculateBtn {
+            background-color: #4b6cb7;
+            color: white;
+        }
+        
+        #calculateBtn:hover {
+            background-color: #3a5795;
+            transform: translateY(-2px);
+        }
+        
+        #resetBtn {
+            background-color: #f0f2f5;
+            color: #555;
+        }
+        
+        #resetBtn:hover {
+            background-color: #e4e6e9;
+            transform: translateY(-2px);
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .result-value {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #182848;
+        }
+        
+        .pi-value {
+            color: #4b6cb7;
+            font-size: 1.5rem;
+        }
+        
+        .error-positive {
+            color: #d32f2f;
+        }
+        
+        .error-negative {
+            color: #388e3c;
+        }
+        
+        #visualization {
+            grid-column: 1 / -1;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-top: 20px;
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .points-info {
+            text-align: center;
+            margin-top: 15px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .progress-container {
+            margin-top: 25px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f2f5;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4b6cb7, #3a5795);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            font-weight: 600;
+            color: #4b6cb7;
+        }
+        
+        footer {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #4b6cb7;
+        }
+        
+        .error-message {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .explanation {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .explanation h3 {
+            color: #4b6cb7;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Оценка числа π методом Монте-Карло</h1>
+            <p class="description">
+                Данная страница использует вероятностный метод Монте-Карло для оценки числа π.
+                Чем больше точек вы сгенерируете, тем точнее будет результат.
+            </p>
+        </header>
+        
+        <div class="control-panel">
+            <h2>Параметры расчета</h2>
+            
+            <div class="input-group">
+                <label for="points">Количество точек:</label>
+                <input type="number" id="points" min="1" max="10000000" value="10000">
+                <small>Рекомендуемое значение: от 1000 до 1 000 000</small>
+            </div>
+            
+            <div class="input-group">
+                <label for="speed">Скорость визуализации:</label>
+                <select id="speed" style="width: 100%; padding: 12px 15px; border-radius: 8px; border: 2px solid #ddd; font-size: 1rem;">
+                    <option value="0">Без визуализации (быстро)</option>
+                    <option value="10">Медленно</option>
+                    <option value="5" selected>Средне</option>
+                    <option value="1">Быстро</option>
+                </select>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+            
+            <div class="button-group">
+                <button id="calculateBtn">Начать расчет</button>
+                <button id="resetBtn">Сбросить</button>
+            </div>
+            
+            <div class="loading" id="loadingMessage">Выполняется расчет... Пожалуйста, подождите.</div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="explanation">
+                <h3>Как это работает?</h3>
+                <p>Метод Монте-Карло основан на геометрической вероятности. Мы генерируем случайные точки в квадрате со стороной 2, в который вписан круг радиусом 1.</p>
+                <p>Отношение площади круга к площади квадрата равно π/4. Поэтому, подсчитав долю точек, попавших в круг, и умножив её на 4, мы получаем оценку числа π.</p>
+            </div>
+        </div>
+        
+        <div class="results-panel">
+            <h2>Результаты расчета</h2>
+            
+            <div class="result-item">
+                <span class="result-label">Всего точек:</span>
+                <span class="result-value" id="totalPoints">0</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Точек в круге:</span>
+                <span class="result-value" id="inCirclePoints">0</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Оценка числа π:</span>
+                <span class="result-value pi-value" id="estimatedPi">0</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Точное значение π:</span>
+                <span class="result-value">3.1415926535</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Погрешность:</span>
+                <span class="result-value" id="error">0</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Относительная погрешность:</span>
+                <span class="result-value" id="relativeError">0%</span>
+            </div>
+            
+            <div class="explanation">
+                <h3>Точность расчета</h3>
+                <p>Погрешность показывает разницу между точным значением π и полученной оценкой. Чем больше точек используется в расчете, тем меньше погрешность.</p>
+                <p>Относительная погрешность показывает погрешность в процентах от точного значения π.</p>
+            </div>
+        </div>
+        
+        <div id="visualization">
+            <h2>Визуализация</h2>
+            <div class="canvas-container">
+                <canvas id="pointsCanvas" width="600" height="600"></canvas>
+            </div>
+            <div class="points-info">
+                <p>Синие точки находятся внутри круга, красные - снаружи.</p>
+                <p>Точек внутри круга: <span id="visualInCircle">0</span> из <span id="visualTotal">0</span></p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Страница создана на основе метода Монте-Карло для оценки числа π</p>
+            <p>Аналог Python-функции generation_calculation() реализован на JavaScript</p>
+        </footer>
+    </div>
+
+    <script>
+        // Элементы DOM
+        const pointsInput = document.getElementById('points');
+        const speedSelect = document.getElementById('speed');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        
+        // Элементы для отображения результатов
+        const totalPointsElement = document.getElementById('totalPoints');
+        const inCirclePointsElement = document.getElementById('inCirclePoints');
+        const estimatedPiElement = document.getElementById('estimatedPi');
+        const errorElement = document.getElementById('error');
+        const relativeErrorElement = document.getElementById('relativeError');
+        
+        // Элементы для визуализации
+        const canvas = document.getElementById('pointsCanvas');
+        const ctx = canvas.getContext('2d');
+        const visualInCircleElement = document.getElementById('visualInCircle');
+        const visualTotalElement = document.getElementById('visualTotal');
+        
+        // Переменные для состояния
+        let isCalculating = false;
+        let animationId = null;
+        let pointsInCircle = 0;
+        let totalPoints = 0;
+        let pointsData = [];
+        
+        // Настройка размера canvas
+        function resizeCanvas() {
+            const containerWidth = document.querySelector('.canvas-container').offsetWidth;
+            canvas.width = Math.min(600, containerWidth);
+            canvas.height = canvas.width; // Делаем квадратный canvas
+            redrawPoints();
+        }
+        
+        // Функция, аналогичная generation_calculation из Python
+        function generationCalculation(points) {
+            let inCircle = 0;
+            const data = [];
+            
+            for (let i = 0; i < points; i++) {
+                // Генерация случайных точек в диапазоне [-1, 1]
+                const x = Math.random() * 2 - 1;
+                const y = Math.random() * 2 - 1;
+                
+                // Проверка, попадает ли точка в круг
+                const distance = Math.sqrt(x * x + y * y);
+                const isInside = distance <= 1;
+                
+                if (isInside) {
+                    inCircle++;
+                }
+                
+                data.push({x, y, isInside});
+            }
+            
+            // Вычисление оценки π
+            const estimatedPi = 4 * (inCircle / points);
+            
+            return {
+                inCircle,
+                estimatedPi,
+                pointsData: data
+            };
+        }
+        
+        // Функция для расчета с визуализацией
+        function calculateWithVisualization(points, speed) {
+            if (isCalculating) return;
+            
+            // Сброс состояния
+            isCalculating = true;
+            pointsInCircle = 0;
+            totalPoints = 0;
+            pointsData = [];
+            
+            // Показать индикатор загрузки
+            loadingMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            // Сбросить canvas
+            clearCanvas();
+            
+            // Обновить UI
+            calculateBtn.disabled = true;
+            calculateBtn.textContent = 'Вычисление...';
+            
+            // Если выбрана нулевая скорость (без визуализации)
+            if (speed === 0) {
+                progressContainer.style.display = 'block';
+                
+                // Выполнить расчет без анимации
+                const batchSize = 100000; // Размер пакета для расчета
+                const batches = Math.ceil(points / batchSize);
+                
+                let processedPoints = 0;
+                let totalInCircle = 0;
+                
+                function processBatch(batchIndex) {
+                    const batchStart = batchIndex * batchSize;
+                    const batchEnd = Math.min((batchIndex + 1) * batchSize, points);
+                    const batchPoints = batchEnd - batchStart;
+                    
+                    // Расчет для текущего пакета
+                    for (let i = 0; i < batchPoints; i++) {
+                        const x = Math.random() * 2 - 1;
+                        const y = Math.random() * 2 - 1;
+                        const distance = Math.sqrt(x * x + y * y);
+                        
+                        if (distance <= 1) {
+                            totalInCircle++;
+                        }
+                        
+                        // Сохраняем только небольшое подмножество точек для визуализации
+                        if (i % Math.max(1, Math.floor(batchPoints / 1000)) === 0) {
+                            pointsData.push({x, y, isInside: distance <= 1});
+                        }
+                    }
+                    
+                    processedPoints += batchPoints;
+                    
+                    // Обновить прогресс
+                    const progress = Math.round((processedPoints / points) * 100);
+                    progressFill.style.width = `${progress}%`;
+                    progressText.textContent = `${progress}%`;
+                    
+                    // Если остались пакеты, продолжить
+                    if (batchIndex < batches - 1) {
+                        setTimeout(() => processBatch(batchIndex + 1), 0);
+                    } else {
+                        // Расчет завершен
+                        finishCalculation(totalInCircle, processedPoints);
+                    }
+                }
+                
+                // Начать обработку пакетов
+                processBatch(0);
+            } else {
+                // С визуализацией
+                progressContainer.style.display = 'none';
+                
+                // Функция для отрисовки точек с задержкой
+                let currentPoint = 0;
+                
+                function drawNextPoint() {
+                    if (currentPoint >= points || !isCalculating) {
+                        finishCalculation(pointsInCircle, currentPoint);
+                        return;
+                    }
+                    
+                    // Генерация случайной точки
+                    const x = Math.random() * 2 - 1;
+                    const y = Math.random() * 2 - 1;
+                    const distance = Math.sqrt(x * x + y * y);
+                    const isInside = distance <= 1;
+                    
+                    // Сохранение точки
+                    pointsData.push({x, y, isInside});
+                    
+                    if (isInside) {
+                        pointsInCircle++;
+                    }
+                    
+                    totalPoints++;
+                    
+                    // Отрисовка точки
+                    drawPoint(x, y, isInside);
+                    
+                    // Обновление счетчиков каждые 100 точек
+                    if (currentPoint % 100 === 0 || currentPoint === points - 1) {
+                        updateResults(pointsInCircle, totalPoints);
+                    }
+                    
+                    currentPoint++;
+                    
+                    // Планирование следующей отрисовки
+                    animationId = setTimeout(drawNextPoint, speed);
+                }
+                
+                // Начать анимацию
+                drawNextPoint();
+            }
+        }
+        
+        // Функция завершения расчета
+        function finishCalculation(inCircle, total) {
+            // Обновить результаты
+            updateResults(inCircle, total);
+            
+            // Скрыть индикатор загрузки
+            loadingMessage.style.display = 'none';
+            progressContainer.style.display = 'none';
+            
+            // Включить кнопку
+            calculateBtn.disabled = false;
+            calculateBtn.textContent = 'Начать расчет';
+            
+            isCalculating = false;
+            
+            // Остановить анимацию, если она была
+            if (animationId) {
+                clearTimeout(animationId);
+                animationId = null;
+            }
+        }
+        
+        // Функция обновления результатов
+        function updateResults(inCircle, total) {
+            // Вычисление оценки π
+            const estimatedPi = total > 0 ? 4 * (inCircle / total) : 0;
+            const exactPi = Math.PI;
+            const error = exactPi - estimatedPi;
+            const relativeError = total > 0 ? Math.abs(error / exactPi) * 100 : 0;
+            
+            // Обновление элементов DOM
+            totalPointsElement.textContent = total.toLocaleString();
+            inCirclePointsElement.textContent = inCircle.toLocaleString();
+            estimatedPiElement.textContent = estimatedPi.toFixed(10);
+            
+            // Форматирование погрешности
+            const formattedError = Math.abs(error).toFixed(10);
+            errorElement.textContent = `${error >= 0 ? '+' : ''}${error.toFixed(10)}`;
+            errorElement.className = `result-value ${error >= 0 ? 'error-positive' : 'error-negative'}`;
+            
+            relativeErrorElement.textContent = `${relativeError.toFixed(6)}%`;
+            
+            // Обновление визуализации
+            visualInCircleElement.textContent = inCircle;
+            visualTotalElement.textContent = total;
+        }
+        
+        // Функция отрисовки точки на canvas
+        function drawPoint(x, y, isInside) {
+            // Преобразование координат из [-1, 1] в координаты canvas
+            const canvasX = (x + 1) * canvas.width / 2;
+            const canvasY = (y + 1) * canvas.height / 2;
+            const pointSize = Math.max(1, canvas.width / 300);
+            
+            // Отрисовка точки
+            ctx.beginPath();
+            ctx.arc(canvasX, canvasY, pointSize, 0, Math.PI * 2);
+            ctx.fillStyle = isInside ? '#4b6cb7' : '#d32f2f';
+            ctx.fill();
+            
+            // Отрисовка круга, если еще не нарисован
+            if (totalPoints === 1) {
+                drawCircle();
+            }
+        }
+        
+        // Функция отрисовки круга
+        function drawCircle() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2;
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#182848';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        
+        // Функция очистки canvas
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Отрисовка квадрата
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            
+            // Отрисовка осей
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.strokeStyle = '#eee';
+            ctx.stroke();
+        }
+        
+        // Функция перерисовки всех точек
+        function redrawPoints() {
+            clearCanvas();
+            drawCircle();
+            
+            // Перерисовка всех точек
+            for (const point of pointsData) {
+                const canvasX = (point.x + 1) * canvas.width / 2;
+                const canvasY = (point.y + 1) * canvas.height / 2;
+                const pointSize = Math.max(1, canvas.width / 300);
+                
+                ctx.beginPath();
+                ctx.arc(canvasX, canvasY, pointSize, 0, Math.PI * 2);
+                ctx.fillStyle = point.isInside ? '#4b6cb7' : '#d32f2f';
+                ctx.fill();
+            }
+        }
+        
+        // Обработчики событий
+        calculateBtn.addEventListener('click', () => {
+            const points = parseInt(pointsInput.value);
+            const speed = parseInt(speedSelect.value);
+            
+            // Валидация ввода
+            if (isNaN(points) || points <= 0) {
+                errorMessage.textContent = "Ошибка! Число точек должно быть положительным целым числом.";
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            if (points > 10000000) {
+                errorMessage.textContent = "Ошибка! Число точек не должно превышать 10 000 000.";
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Запуск расчета
+            calculateWithVisualization(points, speed);
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            // Остановить текущий расчет
+            isCalculating = false;
+            if (animationId) {
+                clearTimeout(animationId);
+                animationId = null;
+            }
+            
+            // Сброс UI
+            calculateBtn.disabled = false;
+            calculateBtn.textContent = 'Начать расчет';
+            loadingMessage.style.display = 'none';
+            progressContainer.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            // Сброс результатов
+            totalPointsElement.textContent = '0';
+            inCirclePointsElement.textContent = '0';
+            estimatedPiElement.textContent = '0';
+            errorElement.textContent = '0';
+            relativeErrorElement.textContent = '0%';
+            
+            visualInCircleElement.textContent = '0';
+            visualTotalElement.textContent = '0';
+            
+            // Очистка canvas
+            clearCanvas();
+            
+            // Сброс данных
+            pointsData = [];
+        });
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            
+            // Отрисовка начального состояния
+            clearCanvas();
+            drawCircle();
+            
+            // Установка начальных значений
+            updateResults(0, 0);
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
